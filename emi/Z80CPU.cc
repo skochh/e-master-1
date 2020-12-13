@@ -1,9 +1,8 @@
-
-
 #include <fstream>
 #include <cstdint>
 #include <vector>
 #include "Z80CPU.h"
+#include <iostream>
 
 #pragma pack(push, 1)
 struct SNA_Header
@@ -52,17 +51,17 @@ struct Z80_Header_1
 #pragma pack(push, 1)
 struct Z80_Header_2
 {
-//	uint16_t hdrlen;
+
 	uint16_t PC;
 	uint8_t hw;
-	uint8_t ext0; // 7ffd
-	uint8_t ext1; // If.1
-	uint8_t ext2; // ayyyyy
+	uint8_t ext0;
+	uint8_t ext1;
+	uint8_t ext2;
 	uint8_t ay_last_write;
 	uint8_t ay_state[16];
 	uint16_t tsc_lo;
 	uint8_t tsc_hi;
-	uint8_t zero; // используется эмулятором QL
+	uint8_t zero;
 	uint8_t whatever[4];
 	uint8_t joy[10];
 	uint8_t joy2[10];
@@ -70,19 +69,26 @@ struct Z80_Header_2
 };
 #pragma pack(pop)
 
-byte In_memo(void* par, ushort address) {
+unsigned char In_memo(void *par, unsigned short address)
+{
 	return reinterpret_cast<Z80CPU*>(par)->_bus.read(address);
 }
-void Out_memo(void* par, ushort address, byte data) {
+void Out_memo(void *par, unsigned short address, unsigned char data)
+{
 	reinterpret_cast<Z80CPU*>(par)->_bus.write(address, data);
 }
-byte In_inpout(void* par, ushort address) {
+unsigned char In_inpout(void *par, unsigned short address)
+{
 	return reinterpret_cast<Z80CPU*>(par)->_bus.read(address, true);
 }
-void Out_inpout(void* par, ushort address, byte data) {
+void Out_inpout(void *par, unsigned short address, unsigned char data)
+{
 	reinterpret_cast<Z80CPU*>(par)->_bus.write(address, data, true);
 }
+zuint32 int_datar(void* context){
 
+}
+/*
 void Z80CPU::save_state_sna(const char *filename)
 {
 	SNA_Header hdr;
@@ -90,7 +96,7 @@ void Z80CPU::save_state_sna(const char *filename)
 	data.resize(16384 * 3);
 	for (unsigned memptr = 16384; memptr < 65536; memptr++)
 		data[memptr - 16384] = _bus.read(memptr);
-	hdr.I = _context.I;
+	hdr.I = _context.state.i;
 	hdr.HL1 = _context.R2.wr.HL;
 	hdr.DE1 = _context.R2.wr.DE;
 	hdr.BC1 = _context.R2.wr.BC;
@@ -105,10 +111,10 @@ void Z80CPU::save_state_sna(const char *filename)
 	hdr.AF = _context.R1.wr.AF;
 	hdr.SP = _context.R1.wr.SP;
 	hdr.IM = _context.IM;
-	hdr.FE = 0; // FIXME: сохранять реальный цвет рамочки
+	hdr.FE = 0;
 	hdr.SP -= 2;
-	data[hdr.SP - 16384] =  _context.PC & 0x00ff;
-	data[hdr.SP - 16384 + 1] = _context.PC >> 8;
+	data[hdr.SP - 16384] =  _context.state.pc & 0x00ff;
+	data[hdr.SP - 16384 + 1] = _context.state.pc >> 8;
 
 	std::fstream sna;
 	sna.open(filename, std::ios::out | std::ios::binary);
@@ -128,19 +134,19 @@ void Z80CPU::load_state_sna(const char *filename)
 	sna.read(reinterpret_cast<char *>(&hdr), sizeof(hdr));
 	sna.read(reinterpret_cast<char *>(&data[0]), data.size());
 
-	data[hdr.SP - 16384] = _context.PC & 0x00ff;
-	data[hdr.SP - 16384 + 1] = _context.PC >> 8;
+	data[hdr.SP - 16384] = _context.state.pc & 0x00ff;
+	data[hdr.SP - 16384 + 1] = _context.state.pc >> 8;
 
-	_context.PC = 0;
-	_context.PC |= data[hdr.SP - 16384];
-	_context.PC |= (data[hdr.SP - 16384 + 1] << 8);
+	_context.state.pc = 0;
+	_context.state.pc |= data[hdr.SP - 16384];
+	_context.state.pc |= (data[hdr.SP - 16384 + 1] << 8);
 	hdr.SP += 2;
 
 	for (unsigned memptr = 16384; memptr < 65536; memptr++)
 		_bus.write(memptr, data[memptr - 16384]);
 
 
-	_context.I = hdr.I;
+	_context.state.i = hdr.I;
 	_context.R2.wr.HL = hdr.HL1;
 	_context.R2.wr.DE = hdr.DE1;
 	_context.R2.wr.BC = hdr.BC1;
@@ -158,7 +164,7 @@ void Z80CPU::load_state_sna(const char *filename)
 
 	_bus.write(0xfe, hdr.FE, true);
 
-	_context.IFF1 = _context.IFF2;
+	_context. = _context.IFF2;
 }
 
 void Z80CPU::load_state_z80(const char *filename)
@@ -174,12 +180,15 @@ void Z80CPU::load_state_z80(const char *filename)
 	std::fstream z80f;
 	z80f.open(filename, std::ios::in | std::ios::binary);
 	z80f.read(reinterpret_cast<char *>(&hdr1), sizeof(hdr1));
-	if (hdr1.PC == 0) {
+	if (hdr1.PC == 0)
+	{
 		version = 2;
 		uint16_t hdr2size;
 		z80f.read(reinterpret_cast<char *>(&hdr2size), 2);
 		z80f.read(reinterpret_cast<char *>(&hdr2), hdr2size);
-	} else {
+	}
+	else
+	{
 		real_pc = hdr1.PC;
 	}
 
@@ -213,33 +222,44 @@ void Z80CPU::load_state_z80(const char *filename)
 	_bus.write(0xfe, (hdr1.stuffs1 >> 1) & 0x07, true);
 	_context.IM = hdr1.stuffs2 & 0x03;
 
-	if (hdr1.stuffs1 & 0x20) { // данные сжаты
+	if (hdr1.stuffs1 & 0x20)
+	{
 		uint16_t memptr = 0;
 		uint8_t b1, b2, xx, yy;
 
-		do {
+		do
+		{
 			z80f.read(reinterpret_cast<char *>(&b1), 1);
-			if (b1 != 0xed) {
+			if (b1 != 0xed)
+			{
 				data[memptr] = b1;
 				memptr++;
-			} else { // первый ed встречен
+			}
+			else
+			{
 				z80f.read(reinterpret_cast<char *>(&b2), 1);
-				if (b2 != 0xed) {
+				if (b2 != 0xed)
+				{
 					data[memptr] = b1;
 					memptr++;
 					data[memptr] = b2;
 					memptr++;
-				} else { // блок сжат!
+				}
+				else
+				{
 					z80f.read(reinterpret_cast<char *>(&xx), 1);
 					z80f.read(reinterpret_cast<char *>(&yy), 1);
-					while (yy > 0) {
+					while (yy > 0)
+					{
 						data[memptr++] = xx;
 					}
 				}
 			}
 		} while (z80f.good() and not z80f.eof());
 
-	} else { // данные не сжаты
+	}
+	else
+	{
 		z80f.readsome(reinterpret_cast<char *>(&data[0]), data.size());
 	}
 
@@ -248,3 +268,4 @@ void Z80CPU::load_state_z80(const char *filename)
 
 	z80f.close();
 }
+*/

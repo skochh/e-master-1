@@ -1,7 +1,14 @@
-
+/*
+ * Window.cc
+*/
 #include <stdexcept>
+#include <iostream>
 #include "Window.h"
+
 #include <map>
+
+int i = 0;
+int j = 0;
 
 static const int gre[16] = {	0,   0,   0,   0, 168, 168, 168, 168,
 								0,   0,   0,   0, 255, 255, 255, 255, };
@@ -78,20 +85,20 @@ void Window::handle_event(const SDL_Event &event)
 			_want_quit = true;
 			break;
 		case SDL_KEYDOWN:
-			if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
-				cpu.reset();
-			if (event.key.keysym.scancode == SDL_SCANCODE_F6)
-				cpu.save_state_sna("save.sna");
-			if (event.key.keysym.scancode == SDL_SCANCODE_F9)
-				cpu.load_state_sna("save.sna");
-			if (event.key.keysym.scancode == SDL_SCANCODE_F8)
-				cpu.load_state_sna("jetpac.sna");
-
-			{
-				auto k = s_keymap.find(event.key.keysym.scancode);
-				if (k == s_keymap.end()) break;
-				io.keydown(k->second.first, k->second.second);
-			}
+				if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+					cpu.reset();
+				/*if (event.key.keysym.scancode == SDL_SCANCODE_F6)
+					cpu.save_state_sna("save.sna");
+				if (event.key.keysym.scancode == SDL_SCANCODE_F9)
+					cpu.load_state_sna("save.sna");
+				if (event.key.keysym.scancode == SDL_SCANCODE_F8)
+					cpu.load_state_sna("jetpac.sna");
+				*/
+				{
+					auto k = s_keymap.find(event.key.keysym.scancode);
+					if (k == s_keymap.end()) break;
+					io.keydown(k->second.first, k->second.second);
+				}
 			break;
 		case SDL_KEYUP:
 			{
@@ -107,16 +114,20 @@ void Window::handle_event(const SDL_Event &event)
 
 void Window::handle_keys(const Uint8 *keys)
 {
+
 }
 
 void Window::do_logic()
 {
+	cpu.intr(1);
+	cpu.ticks(32);
 	cpu.intr(0);
 	cpu.ticks(250000);
 }
 
 void Window::render()
 {
+
 	unsigned bdr = io.border();
 
 	SDL_SetRenderDrawColor(_renderer.get(), red[bdr], gre[bdr], blu[bdr], 255);
@@ -156,9 +167,10 @@ void Window::render()
 						WIDTH_POINT + PIXEL_SCALE * 8 * col + 3 * px), int(
 						HEIGHT_POINT + PIXEL_SCALE * row), PIXEL_SCALE,
 						PIXEL_SCALE };
-				if ((1 << (7 - px)) & val)
+				if ((1 << (7 - px)) & val){
 					SDL_SetRenderDrawColor(_renderer.get(), red[ink_col],
 							gre[ink_col], blu[ink_col], 255);
+				}
 				else
 					SDL_SetRenderDrawColor(_renderer.get(), red[paper_col],
 							gre[paper_col], blu[paper_col], 255);
@@ -176,12 +188,16 @@ void Window::main() {
 
 	while (_want_quit == false) {
 		while (SDL_PollEvent(&event))
+		{
 			handle_event(event);
+		}
 		handle_keys(keys);
-
+		render();
 		do_logic();
 
-		render();
+
 		SDL_RenderPresent(_renderer.get());
 	}
 }
+
+

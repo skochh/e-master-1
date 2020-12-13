@@ -23,6 +23,7 @@ void IO::write(unsigned address, uint8_t value) {
 			;
 		}
 	}
+
 }
 
 uint8_t IO::read(unsigned address) const {
